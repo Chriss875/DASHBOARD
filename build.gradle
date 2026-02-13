@@ -25,37 +25,40 @@ repositories {
 }
 
 dependencies {
-    implementation 'org.springframework.boot:spring-boot-h2console'
-    implementation 'org.springframework.boot:spring-boot-starter-data-jdbc'
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-    implementation 'org.springframework.boot:spring-boot-starter-data-r2dbc'
-    implementation 'org.springframework.boot:spring-boot-starter-flyway'
-    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
-    implementation 'org.springframework.boot:spring-boot-starter-session-data-redis'
-    implementation 'org.springframework.boot:spring-boot-starter-session-jdbc'
+    // Web + WebSocket
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
-    implementation 'org.springframework.boot:spring-boot-starter-webservices'
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
-    implementation 'org.flywaydb:flyway-database-postgresql'
+
+    // Redis (Lettuce client included)
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+    // JPA (for MariaDB entity access)
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+    implementation"org.springframework.security:spring-security-core:7.0.2"
+
+    // MariaDB 10.4.28
+    runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
+
+    // Lombok
     compileOnly 'org.projectlombok:lombok'
-    developmentOnly 'org.springframework.boot:spring-boot-devtools'
-    developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
-    runtimeOnly 'com.h2database:h2'
-    runtimeOnly 'io.r2dbc:r2dbc-h2'
-    runtimeOnly 'org.postgresql:postgresql'
-    runtimeOnly 'org.postgresql:r2dbc-postgresql'
-    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
     annotationProcessor 'org.projectlombok:lombok'
-    testImplementation 'org.springframework.boot:spring-boot-starter-data-jdbc-test'
-    testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
-    testImplementation 'org.springframework.boot:spring-boot-starter-data-r2dbc-test'
-    testImplementation 'org.springframework.boot:spring-boot-starter-flyway-test'
-    testImplementation 'org.springframework.boot:spring-boot-starter-jdbc-test'
-    testImplementation 'org.springframework.boot:spring-boot-starter-session-data-redis-test'
-    testImplementation 'org.springframework.boot:spring-boot-starter-session-jdbc-test'
-    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
-    testImplementation 'org.springframework.boot:spring-boot-starter-webservices-test'
-    testImplementation 'org.springframework.boot:spring-boot-starter-websocket-test'
+
+    // Jackson (for JSON serialization in WebSocket payloads)
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+
+    implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
+
+    // Dev tools
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+    // Springdoc OpenAPI (Swagger UI)
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.2.0'
+
+    // Test
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
