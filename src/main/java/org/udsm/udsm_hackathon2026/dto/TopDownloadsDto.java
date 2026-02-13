@@ -3,12 +3,12 @@ import lombok.*;
 
 @Getter
 @Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class TopArticleDto {
+public class TopDownloadsDto {
     private Long articleId;
     private String title;
     private String authors;
-    private Long reads;
+    private Long totalDownloads;
 }

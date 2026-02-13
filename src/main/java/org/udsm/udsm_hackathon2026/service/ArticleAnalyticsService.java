@@ -2,13 +2,13 @@ package org.udsm.udsm_hackathon2026.service;
 import org.udsm.udsm_hackathon2026.dto.ArticleListDto;
 import org.udsm.udsm_hackathon2026.dto.ArticleMetricsResponseDto;
 import org.udsm.udsm_hackathon2026.dto.GeographicalMetricsDto;
+import org.udsm.udsm_hackathon2026.dto.MonthlyMetricsDto;
 import org.udsm.udsm_hackathon2026.repository.ArticleRepository;
 import org.udsm.udsm_hackathon2026.repository.CitationRepository;
 import org.udsm.udsm_hackathon2026.repository.MetricRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -132,5 +132,28 @@ public class ArticleAnalyticsService {
 
         log.info("Found {} geographical download locations for article {}", metrics.size(), articleId);
         return metrics;
+    }
+
+    /**
+     * Get monthly views AND downloads - ENHANCED VERSION
+     */
+    public List<MonthlyMetricsDto> getMonthlyMetrics(Long articleId) {
+        log.info("Fetching monthly views and downloads for article ID: {}", articleId);
+
+        List<Object[]> rows = metricRepository.getMonthlyMetricsByArticle(articleId);
+        List<MonthlyMetricsDto> monthlyMetrics = new ArrayList<>();
+
+        for (Object[] row : rows) {
+            String month = (String) row[0];
+            Integer year = ((Number) row[1]).intValue();
+            Integer monthNum = ((Number) row[2]).intValue();
+            Long views = ((Number) row[3]).longValue();
+            Long downloads = ((Number) row[4]).longValue();
+
+            monthlyMetrics.add(new MonthlyMetricsDto(month, year, monthNum, views, downloads));
+        }
+
+        log.info("Found {} months of data for article {}", monthlyMetrics.size(), articleId);
+        return monthlyMetrics;
     }
 }

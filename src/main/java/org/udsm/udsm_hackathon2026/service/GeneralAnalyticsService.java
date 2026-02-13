@@ -1,15 +1,15 @@
 package org.udsm.udsm_hackathon2026.service;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.udsm.udsm_hackathon2026.dto.ArticleInfoDto;
 import org.udsm.udsm_hackathon2026.dto.CountryCountDto;
 import org.udsm.udsm_hackathon2026.dto.TopArticleDto;
+import org.udsm.udsm_hackathon2026.dto.TopDownloadsDto;
 import org.udsm.udsm_hackathon2026.repository.CitationRepository;
 import org.udsm.udsm_hackathon2026.repository.MetricRepository;
 import org.udsm.udsm_hackathon2026.repository.PublicationRepository;
 import org.udsm.udsm_hackathon2026.repository.PublicationSettingRepository;
-
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,11 +19,12 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class AnalyticsService {
+public class GeneralAnalyticsService {
 
     private final MetricRepository metricRepository;
     private final CitationRepository citationRepository;
     private final PublicationRepository publicationRepository;
+    private final ArticleInfoService articleService;
     private final PublicationSettingRepository publicationSettingRepository;
 
     /**
@@ -91,6 +92,7 @@ public class AnalyticsService {
 
         if (rows.isEmpty()) {
             return List.of();
+
         }
 
         // Collect submission_ids
@@ -149,5 +151,28 @@ public class AnalyticsService {
         if (value instanceof Long l) return l;
         if (value instanceof BigDecimal bd) return bd.longValue();
         return ((Number) value).longValue();
+    }
+
+    public List<TopDownloadsDto> getTopDownloadedArticles(int limit) {
+        List<Object[]> rows = metricRepository.findTopDownloadedArticles(limit);
+        if (rows.isEmpty()) {
+            return List.of();
+        }
+        return rows.stream()
+                .map(row -> {
+                    Long submissionId = ((Number) row[0]).longValue();
+                    Long totalDownloads = ((Number) row[1]).longValue();
+
+                    // Fetch article metadata (title + authors)
+                    ArticleInfoDto article = articleService.getArticleInfo(submissionId);
+
+                    return TopDownloadsDto.builder()
+                            .articleId(submissionId)
+                            .title(article.getTitle())
+                            .authors(String.join("; ", article.getAuthors()))
+                            .totalDownloads(totalDownloads)
+                            .build();
+                })
+                .toList();
     }
 }

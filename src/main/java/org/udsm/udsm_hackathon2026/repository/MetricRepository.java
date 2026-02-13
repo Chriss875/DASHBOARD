@@ -145,4 +145,73 @@ public interface MetricRepository extends JpaRepository<Metric, Long> {
             nativeQuery = true)
     List<Object[]> getGeographicalDownloadsByArticle(@Param("submissionId") Long submissionId);
 
+    // ══════════════════════════════════════════════════════════════
+    // ENHANCED: MONTHLY VIEWS AND DOWNLOADS COMBINED
+    // ══════════════════════════════════════════════════════════════
+
+    /**
+     * Get monthly views AND downloads statistics for an article
+     * Returns data grouped by month for comprehensive time-series visualization
+     */
+    @Query(value = "SELECT " +
+            "COALESCE(views.month, downloads.month) AS month, " +
+            "CAST(SUBSTRING(COALESCE(views.month, downloads.month), 1, 4) AS UNSIGNED) AS year, " +
+            "CAST(SUBSTRING(COALESCE(views.month, downloads.month), 5, 2) AS UNSIGNED) AS month_num, " +
+            "COALESCE(views.total_views, 0) AS views, " +
+            "COALESCE(downloads.total_downloads, 0) AS downloads " +
+            "FROM ( " +
+            "    SELECT m.month, SUM(m.metric) AS total_views " +
+            "    FROM metrics m " +
+            "    WHERE m.submission_id = :submissionId " +
+            "    AND m.assoc_type = 1048585 " +
+            "    AND m.month IS NOT NULL " +
+            "    GROUP BY m.month " +
+            ") views " +
+            "LEFT JOIN ( " +
+            "    SELECT m.month, SUM(m.metric) AS total_downloads " +
+            "    FROM metrics m " +
+            "    WHERE m.submission_id = :submissionId " +
+            "    AND m.assoc_type = 515 " +
+            "    AND m.month IS NOT NULL " +
+            "    GROUP BY m.month " +
+            ") downloads ON views.month = downloads.month " +
+            "UNION " +
+            "SELECT " +
+            "COALESCE(views.month, downloads.month) AS month, " +
+            "CAST(SUBSTRING(COALESCE(views.month, downloads.month), 1, 4) AS UNSIGNED) AS year, " +
+            "CAST(SUBSTRING(COALESCE(views.month, downloads.month), 5, 2) AS UNSIGNED) AS month_num, " +
+            "COALESCE(views.total_views, 0) AS views, " +
+            "COALESCE(downloads.total_downloads, 0) AS downloads " +
+            "FROM ( " +
+            "    SELECT m.month, SUM(m.metric) AS total_downloads " +
+            "    FROM metrics m " +
+            "    WHERE m.submission_id = :submissionId " +
+            "    AND m.assoc_type = 515 " +
+            "    AND m.month IS NOT NULL " +
+            "    GROUP BY m.month " +
+            ") downloads " +
+            "LEFT JOIN ( " +
+            "    SELECT m.month, SUM(m.metric) AS total_views " +
+            "    FROM metrics m " +
+            "    WHERE m.submission_id = :submissionId " +
+            "    AND m.assoc_type = 1048585 " +
+            "    AND m.month IS NOT NULL " +
+            "    GROUP BY m.month " +
+            ") views ON downloads.month = views.month " +
+            "WHERE views.month IS NULL " +
+            "ORDER BY month ASC",
+            nativeQuery = true)
+    List<Object[]> getMonthlyMetricsByArticle(@Param("submissionId") Long submissionId);
+
+    @Query(value = """
+        SELECT m.submission_id, SUM(m.metric) AS total
+        FROM metrics m
+        WHERE m.assoc_type = 515
+          AND m.submission_id IS NOT NULL
+        GROUP BY m.submission_id
+        ORDER BY total DESC
+        LIMIT :limit
+        """,
+            nativeQuery = true)
+    List<Object[]> findTopDownloadedArticles(@Param("limit") int limit);
 }

@@ -4,16 +4,17 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.udsm.udsm_hackathon2026.dto.CountryCountDto;
 import org.udsm.udsm_hackathon2026.dto.TopArticleDto;
-import org.udsm.udsm_hackathon2026.service.AnalyticsService;
+import org.udsm.udsm_hackathon2026.dto.TopDownloadsDto;
+import org.udsm.udsm_hackathon2026.service.GeneralAnalyticsService;
 import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
-public class GeneralAnalyticsController {
+public class HomeAnalyticsController {
 
-    private final AnalyticsService analyticsService;
+    private final GeneralAnalyticsService analyticsService;
 
     // 1. GET /api/v1/total-downloads/articles
     @GetMapping("/total-downloads/articles")
@@ -59,4 +60,11 @@ public class GeneralAnalyticsController {
             @RequestParam(defaultValue = "10") int limit) {
         return ResponseEntity.ok(analyticsService.getTopReadArticles(limit));
     }
+
+    @GetMapping("/top-download/articles")
+    public ResponseEntity<List<TopDownloadsDto>> getTopDownloadedArticles(
+            @RequestParam(defaultValue = "10") int limit) {
+        return ResponseEntity.ok(analyticsService.getTopDownloadedArticles(limit));
+    }
+
 }

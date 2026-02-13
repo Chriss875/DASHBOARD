@@ -2,6 +2,7 @@ package org.udsm.udsm_hackathon2026.Controller;
 import org.udsm.udsm_hackathon2026.dto.ArticleListDto;
 import org.udsm.udsm_hackathon2026.dto.ArticleMetricsResponseDto;
 import org.udsm.udsm_hackathon2026.dto.GeographicalMetricsDto;
+import org.udsm.udsm_hackathon2026.dto.MonthlyMetricsDto;
 import org.udsm.udsm_hackathon2026.service.ArticleAnalyticsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -32,6 +33,7 @@ public class ArticleAnalyticsController {
     @Operation(
             summary = "Get all articles",
             description = "Fetch all articles with ID, name (title), and category. Use this for initial load and filter dropdown."
+
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successfully retrieved articles"),
@@ -107,5 +109,24 @@ public class ArticleAnalyticsController {
         log.info("GET /api/v1/articles/totaldownloads/geographicwise/{} - Fetching geographical downloads", articleId);
         List<GeographicalMetricsDto> geographicalDownloads = articleService.getGeographicalDownloads(articleId);
         return ResponseEntity.ok(geographicalDownloads);
+    }
+
+    /**
+     * ENHANCED: Returns BOTH views AND downloads by month
+     */
+    @GetMapping("/{articleId}/metrics/monthly")
+    @Operation(
+            summary = "Get monthly views and downloads",
+            description = "Retrieve monthly statistics including BOTH views and downloads for comprehensive time-series graphs"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Successfully retrieved monthly metrics"),
+            @ApiResponse(responseCode = "404", description = "Article not found")
+    })
+    public ResponseEntity<List<MonthlyMetricsDto>> getMonthlyMetrics(
+            @Parameter(description = "Article ID", required = true)
+            @PathVariable Long articleId) {
+        log.info("GET /api/v1/articles/{}/metrics/monthly", articleId);
+        return ResponseEntity.ok(articleService.getMonthlyMetrics(articleId));
     }
 }
