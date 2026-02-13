@@ -11,7 +11,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
-public class AnalyticsController {
+public class GeneralAnalyticsController {
 
     private final AnalyticsService analyticsService;
 

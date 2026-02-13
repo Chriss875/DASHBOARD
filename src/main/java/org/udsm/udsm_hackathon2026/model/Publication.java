@@ -1,10 +1,9 @@
 package org.udsm.udsm_hackathon2026.model;
-
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
 import java.time.LocalDate;
+import java.util.List;
 
 @Entity
 @Table(name = "publications")
@@ -24,4 +23,8 @@ public class Publication {
 
     @Column(name = "status")
     private Short status;
+
+    // Relationship with PublicationSettings
+    @OneToMany(mappedBy = "publication")
+    private List<PublicationSetting> settings;
 }

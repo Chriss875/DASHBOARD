@@ -6,7 +6,6 @@ import org.springframework.stereotype.Repository;
 import org.udsm.udsm_hackathon2026.model.Metric;
 import java.util.List;
 
-
 @Repository
 public interface MetricRepository extends JpaRepository<Metric, Long> {
 
@@ -26,8 +25,7 @@ public interface MetricRepository extends JpaRepository<Metric, Long> {
             nativeQuery = true)
     long sumTotalDownloads();
 
-    // ── Total readers: SUM(metric) where assoc_type = 256 ──
-    @Query(value = "SELECT COALESCE(SUM(m.metric), 0) FROM metrics m WHERE m.assoc_type = 256",
+    @Query(value = "SELECT COALESCE(SUM(m.metric), 0) FROM metrics m WHERE m.assoc_type = 1048585",
             nativeQuery = true)
     long sumTotalReaders();
 
@@ -56,7 +54,7 @@ public interface MetricRepository extends JpaRepository<Metric, Long> {
     // ── Top read articles (by submission_id) ──
     @Query(value = "SELECT m.submission_id, SUM(m.metric) AS total " +
             "FROM metrics m " +
-            "WHERE m.assoc_type = 256 AND m.submission_id IS NOT NULL " +
+            "WHERE m.assoc_type = 1048585 AND m.submission_id IS NOT NULL " +
             "GROUP BY m.submission_id " +
             "ORDER BY total DESC " +
             "LIMIT :limit",
@@ -77,4 +75,74 @@ public interface MetricRepository extends JpaRepository<Metric, Long> {
                                                   @Param("fromDay") String fromDay,
                                                   @Param("toDay") String toDay,
                                                   @Param("submissionId") Long submissionId);
+
+    // ══════════════════════════════════════════════════════════════
+    // ARTICLE-SPECIFIC QUERIES (by submission_id)
+    // ══════════════════════════════════════════════════════════════
+
+    /**
+     * Get total downloads for a specific article
+     * assoc_type = 515 typically represents file downloads in OJS
+     */
+    @Query(value = "SELECT COALESCE(SUM(m.metric), 0) " +
+            "FROM metrics m " +
+            "WHERE m.submission_id = :submissionId " +
+            "AND m.assoc_type = 515",
+            nativeQuery = true)
+    long getTotalDownloadsByArticle(@Param("submissionId") Long submissionId);
+
+    /**
+     * Get total reads/views for a specific article
+     * assoc_type = 1048585 represents article views
+     */
+    @Query(value = "SELECT COALESCE(SUM(m.metric), 0) " +
+            "FROM metrics m " +
+            "WHERE m.submission_id = :submissionId " +
+            "AND m.assoc_type = 1048585",
+            nativeQuery = true)
+    long getTotalReadsByArticle(@Param("submissionId") Long submissionId);
+
+    /**
+     * Get total readers (unique views) for a specific article
+     * For simplicity, using the sum of metrics as proxy for total readers
+     */
+    @Query(value = "SELECT COALESCE(SUM(m.metric), 0) " +
+            "FROM metrics m " +
+            "WHERE m.submission_id = :submissionId " +
+            "AND m.assoc_type = 1048585",
+            nativeQuery = true)
+    long getTotalReadersByArticle(@Param("submissionId") Long submissionId);
+
+    /**
+     * Get geographical distribution of reads for a specific article
+     */
+    @Query(value = "SELECT " +
+            "COALESCE(NULLIF(m.country_id, ''), 'Unknown') AS country, " +
+            "COALESCE(NULLIF(m.region, ''), 'Unknown') AS region, " +
+            "COALESCE(NULLIF(m.city, ''), 'Unknown') AS city, " +
+            "SUM(m.metric) AS total " +
+            "FROM metrics m " +
+            "WHERE m.submission_id = :submissionId " +
+            "AND m.assoc_type = 1048585 " +
+            "GROUP BY m.country_id, m.region, m.city " +
+            "ORDER BY total DESC",
+            nativeQuery = true)
+    List<Object[]> getGeographicalReadsByArticle(@Param("submissionId") Long submissionId);
+
+    /**
+     * Get geographical distribution of downloads for a specific article
+     */
+    @Query(value = "SELECT " +
+            "COALESCE(NULLIF(m.country_id, ''), 'Unknown') AS country, " +
+            "COALESCE(NULLIF(m.region, ''), 'Unknown') AS region, " +
+            "COALESCE(NULLIF(m.city, ''), 'Unknown') AS city, " +
+            "SUM(m.metric) AS total " +
+            "FROM metrics m " +
+            "WHERE m.submission_id = :submissionId " +
+            "AND m.assoc_type = 515 " +
+            "GROUP BY m.country_id, m.region, m.city " +
+            "ORDER BY total DESC",
+            nativeQuery = true)
+    List<Object[]> getGeographicalDownloadsByArticle(@Param("submissionId") Long submissionId);
+
 }

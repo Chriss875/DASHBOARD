@@ -25,4 +25,8 @@ public class PublicationSetting {
 
     @Column(name = "setting_value", columnDefinition = "MEDIUMTEXT")
     private String settingValue;
+
+    @ManyToOne
+    @JoinColumn(name = "publication_id", referencedColumnName = "publication_id", insertable = false, updatable = false)
+    private Publication publication;
 }

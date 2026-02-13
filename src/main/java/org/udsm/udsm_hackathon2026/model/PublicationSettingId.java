@@ -11,4 +11,5 @@ public class PublicationSettingId implements Serializable {
     private Long publicationId;
     private String locale;
     private String settingName;
+
 }
