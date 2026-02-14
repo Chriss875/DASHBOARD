@@ -18,6 +18,9 @@ public class TopArticleDto {
     @Schema(description = "Article authors (comma-separated)", example = "John Doe, Jane Smith")
     private String authors;
     
+    @Schema(description = "Article abstract/summary", example = "This study explores the application of machine learning...")
+    private String articleAbstract;
+    
     @Schema(description = "Total number of reads", example = "2847")
     private Long reads;
 }

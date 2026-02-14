@@ -85,7 +85,7 @@ public class GeneralAnalyticsService {
     }
 
     // ══════════════════════════════════════════════════════════════
-    //  7. Top Read Articles (with title from publication_settings)
+    //  7. Top Read Articles (with title, authors, and abstract)
     // ══════════════════════════════════════════════════════════════
 
     public List<TopArticleDto> getTopReadArticles(int limit) {
@@ -93,28 +93,30 @@ public class GeneralAnalyticsService {
 
         if (rows.isEmpty()) {
             return List.of();
-
         }
-
-        // Collect submission_ids
-        List<Long> submissionIds = rows.stream()
-                .map(row -> toLong(row[0]))
-                .toList();
-
-        // Batch-fetch titles: submission_id → title
-        Map<Long, String> titleMap = fetchTitlesBySubmissionIds(submissionIds);
 
         List<TopArticleDto> result = new ArrayList<>();
         for (Object[] row : rows) {
             Long submissionId = toLong(row[0]);
             Long reads = toLong(row[1]);
-            String title = titleMap.getOrDefault(submissionId, "Untitled");
+            
+            // Fetch complete article info (title, authors, abstract)
+            ArticleInfoDto articleInfo = articleService.getArticleInfo(submissionId);
+            
+            // Build authors string (comma-separated)
+            String authorsString = articleInfo.getAuthors() != null && !articleInfo.getAuthors().isEmpty()
+                ? String.join(", ", articleInfo.getAuthors())
+                : "Unknown";
+            
             result.add(TopArticleDto.builder()
                     .articleId(submissionId)
-                    .title(title)
+                    .title(articleInfo.getTitle() != null ? articleInfo.getTitle() : "Untitled")
+                    .authors(authorsString)
+                    .articleAbstract(articleInfo.getArticleAbstract())
                     .reads(reads)
                     .build());
         }
+        
         return result;
     }
 
