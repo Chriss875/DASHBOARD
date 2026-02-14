@@ -136,24 +136,39 @@ public class ArticleAnalyticsService {
 
     /**
      * Get monthly views AND downloads - ENHANCED VERSION
+     * @param articleId The article ID
+     * @param year Optional year filter. If null, returns all years
      */
-    public List<MonthlyMetricsDto> getMonthlyMetrics(Long articleId) {
-        log.info("Fetching monthly views and downloads for article ID: {}", articleId);
+    public List<MonthlyMetricsDto> getMonthlyMetrics(Long articleId, Integer year) {
+        log.info("Fetching monthly views and downloads for article ID: {} for year: {}", articleId, year);
 
-        List<Object[]> rows = metricRepository.getMonthlyMetricsByArticle(articleId);
+        List<Object[]> rows;
+        if (year != null) {
+            rows = metricRepository.getMonthlyMetricsByArticleAndYear(articleId, year);
+        } else {
+            rows = metricRepository.getMonthlyMetricsByArticle(articleId);
+        }
+        
         List<MonthlyMetricsDto> monthlyMetrics = new ArrayList<>();
 
         for (Object[] row : rows) {
             String month = (String) row[0];
-            Integer year = ((Number) row[1]).intValue();
+            Integer yearValue = ((Number) row[1]).intValue();
             Integer monthNum = ((Number) row[2]).intValue();
             Long views = ((Number) row[3]).longValue();
             Long downloads = ((Number) row[4]).longValue();
 
-            monthlyMetrics.add(new MonthlyMetricsDto(month, year, monthNum, views, downloads));
+            monthlyMetrics.add(new MonthlyMetricsDto(month, yearValue, monthNum, views, downloads));
         }
 
-        log.info("Found {} months of data for article {}", monthlyMetrics.size(), articleId);
+        log.info("Found {} months of data for article {} (year: {})", monthlyMetrics.size(), articleId, year);
         return monthlyMetrics;
+    }
+    
+    /**
+     * Get monthly views AND downloads - LEGACY VERSION (for backward compatibility)
+     */
+    public List<MonthlyMetricsDto> getMonthlyMetrics(Long articleId) {
+        return getMonthlyMetrics(articleId, null);
     }
 }

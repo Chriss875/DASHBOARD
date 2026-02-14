@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.udsm.udsm_hackathon2026.dto.ArticleInfoDto;
 import org.udsm.udsm_hackathon2026.dto.CountryCountDto;
+import org.udsm.udsm_hackathon2026.dto.MonthlyMetricsDto;
 import org.udsm.udsm_hackathon2026.dto.TopArticleDto;
 import org.udsm.udsm_hackathon2026.dto.TopDownloadsDto;
 import org.udsm.udsm_hackathon2026.repository.CitationRepository;
@@ -174,5 +175,46 @@ public class GeneralAnalyticsService {
                             .build();
                 })
                 .toList();
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  TOTAL MONTHLY METRICS FOR ALL ARTICLES
+    // ══════════════════════════════════════════════════════════════
+
+    /**
+     * Get total monthly views AND downloads statistics for ALL articles combined
+     * @param year Optional year filter. If null, returns all years
+     */
+    public List<MonthlyMetricsDto> getTotalMonthlyMetrics(Integer year) {
+        log.info("Fetching total monthly views and downloads for all articles for year: {}", year);
+
+        List<Object[]> rows;
+        if (year != null) {
+            rows = metricRepository.getTotalMonthlyMetricsByYear(year);
+        } else {
+            rows = metricRepository.getTotalMonthlyMetrics();
+        }
+        
+        List<MonthlyMetricsDto> monthlyMetrics = new ArrayList<>();
+
+        for (Object[] row : rows) {
+            String month = (String) row[0];
+            Integer yearValue = ((Number) row[1]).intValue();
+            Integer monthNum = ((Number) row[2]).intValue();
+            Long views = ((Number) row[3]).longValue();
+            Long downloads = ((Number) row[4]).longValue();
+
+            monthlyMetrics.add(new MonthlyMetricsDto(month, yearValue, monthNum, views, downloads));
+        }
+
+        log.info("Found {} months of total data across all articles (year: {})", monthlyMetrics.size(), year);
+        return monthlyMetrics;
+    }
+    
+    /**
+     * Get total monthly views AND downloads - LEGACY VERSION (for backward compatibility)
+     */
+    public List<MonthlyMetricsDto> getTotalMonthlyMetrics() {
+        return getTotalMonthlyMetrics(null);
     }
 }

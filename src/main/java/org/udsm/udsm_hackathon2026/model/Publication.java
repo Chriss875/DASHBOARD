@@ -3,6 +3,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
@@ -24,7 +25,28 @@ public class Publication {
     @Column(name = "status")
     private Short status;
 
-    // Relationship with PublicationSettings
     @OneToMany(mappedBy = "publication")
     private List<PublicationSetting> settings;
+
+    @Column(name = "access_status")
+    private Long accessStatus;
+
+
+    @Column(name = "last_modified")
+    private LocalDateTime lastModified;
+
+    @Column(name = "primary_contact_id")
+    private Long primaryContactId;
+
+    @Column(name = "section_id")
+    private Long sectionId;
+
+    @Column(name = "seq")
+    private Double seq;
+
+    @Column(name = "url_path", length = 64)
+    private String urlPath;
+
+    @Column(name = "version")
+    private Long version;
 }

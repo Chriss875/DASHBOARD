@@ -1,7 +1,5 @@
 package org.udsm.udsm_hackathon2026.dto;
-
 import lombok.*;
-
 import java.util.List;
 
 @Getter

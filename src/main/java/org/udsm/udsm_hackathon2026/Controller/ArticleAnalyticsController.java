@@ -6,6 +6,8 @@ import org.udsm.udsm_hackathon2026.dto.MonthlyMetricsDto;
 import org.udsm.udsm_hackathon2026.service.ArticleAnalyticsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -14,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+
 
 @RestController
 @RequestMapping("/api/v1/articles")
@@ -32,12 +35,23 @@ public class ArticleAnalyticsController {
     @GetMapping
     @Operation(
             summary = "Get all articles",
-            description = "Fetch all articles with ID, name (title), and category. Use this for initial load and filter dropdown."
-
+            description = "Fetch all articles with ID and name (title). " +
+                         "Use this endpoint for initial load and populating filter dropdowns in the frontend."
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved articles"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(
+                    responseCode = "200", 
+                    description = "Successfully retrieved articles",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ArticleListDto.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "500", 
+                    description = "Internal server error",
+                    content = @Content(mediaType = "application/json")
+            )
     })
     public ResponseEntity<List<ArticleListDto>> getAllArticles() {
         log.info("GET /api/v1/articles - Fetching all articles for listing");
@@ -52,15 +66,32 @@ public class ArticleAnalyticsController {
     @GetMapping("/{articleId}/metrics")
     @Operation(
             summary = "Get complete article metrics",
-            description = "Get all important metrics for an article: name, category, abstract, authors, total downloads, total citations, total readers"
+            description = "Get comprehensive metrics for a specific article including: " +
+                         "basic info (name, abstract, authors, publication date) and " +
+                         "key metrics (total downloads, citations, readers)."
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved article metrics"),
-            @ApiResponse(responseCode = "404", description = "Article not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(
+                    responseCode = "200", 
+                    description = "Successfully retrieved article metrics",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ArticleMetricsResponseDto.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404", 
+                    description = "Article not found",
+                    content = @Content(mediaType = "application/json")
+            ),
+            @ApiResponse(
+                    responseCode = "500", 
+                    description = "Internal server error",
+                    content = @Content(mediaType = "application/json")
+            )
     })
     public ResponseEntity<ArticleMetricsResponseDto> getArticleMetrics(
-            @Parameter(description = "Article ID", required = true)
+            @Parameter(description = "Unique article identifier", required = true, example = "12345")
             @PathVariable Long articleId) {
         log.info("GET /api/v1/articles/{}/metrics - Fetching complete metrics", articleId);
         ArticleMetricsResponseDto metrics = articleService.getArticleMetrics(articleId);
@@ -74,15 +105,31 @@ public class ArticleAnalyticsController {
     @GetMapping("/totalreads/geographicalwise/{articleId}")
     @Operation(
             summary = "Get geographical distribution of reads",
-            description = "Retrieve the geographical breakdown (country, region, city) of reads for a specific article"
+            description = "Retrieve the geographical breakdown (country, region, city) of reads for a specific article. " +
+                         "Useful for creating geographical heatmaps and understanding global readership patterns."
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved geographical reads"),
-            @ApiResponse(responseCode = "404", description = "Article not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(
+                    responseCode = "200", 
+                    description = "Successfully retrieved geographical reads",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = GeographicalMetricsDto.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404", 
+                    description = "Article not found",
+                    content = @Content(mediaType = "application/json")
+            ),
+            @ApiResponse(
+                    responseCode = "500", 
+                    description = "Internal server error",
+                    content = @Content(mediaType = "application/json")
+            )
     })
     public ResponseEntity<List<GeographicalMetricsDto>> getGeographicalReads(
-            @Parameter(description = "Article ID", required = true)
+            @Parameter(description = "Unique article identifier", required = true, example = "12345")
             @PathVariable Long articleId) {
         log.info("GET /api/v1/articles/totalreads/geographicalwise/{} - Fetching geographical reads", articleId);
         List<GeographicalMetricsDto> geographicalReads = articleService.getGeographicalReads(articleId);
@@ -96,15 +143,31 @@ public class ArticleAnalyticsController {
     @GetMapping("/totaldownloads/geographicwise/{articleId}")
     @Operation(
             summary = "Get geographical distribution of downloads",
-            description = "Retrieve the geographical breakdown (country, region, city) of downloads for a specific article"
+            description = "Retrieve the geographical breakdown (country, region, city) of downloads for a specific article. " +
+                         "Useful for creating geographical heatmaps and understanding global download patterns."
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved geographical downloads"),
-            @ApiResponse(responseCode = "404", description = "Article not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(
+                    responseCode = "200", 
+                    description = "Successfully retrieved geographical downloads",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = GeographicalMetricsDto.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404", 
+                    description = "Article not found",
+                    content = @Content(mediaType = "application/json")
+            ),
+            @ApiResponse(
+                    responseCode = "500", 
+                    description = "Internal server error",
+                    content = @Content(mediaType = "application/json")
+            )
     })
     public ResponseEntity<List<GeographicalMetricsDto>> getGeographicalDownloads(
-            @Parameter(description = "Article ID", required = true)
+            @Parameter(description = "Unique article identifier", required = true, example = "12345")
             @PathVariable Long articleId) {
         log.info("GET /api/v1/articles/totaldownloads/geographicwise/{} - Fetching geographical downloads", articleId);
         List<GeographicalMetricsDto> geographicalDownloads = articleService.getGeographicalDownloads(articleId);
@@ -117,16 +180,36 @@ public class ArticleAnalyticsController {
     @GetMapping("/{articleId}/metrics/monthly")
     @Operation(
             summary = "Get monthly views and downloads",
-            description = "Retrieve monthly statistics including BOTH views and downloads for comprehensive time-series graphs"
+            description = "Retrieve monthly statistics including BOTH views and downloads for a specific article. " +
+                         "Perfect for creating comprehensive time-series graphs and trend analysis. " +
+                         "Optionally filter by year to get data for a specific year only."
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved monthly metrics"),
-            @ApiResponse(responseCode = "404", description = "Article not found")
+            @ApiResponse(
+                    responseCode = "200", 
+                    description = "Successfully retrieved monthly metrics",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = MonthlyMetricsDto.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404", 
+                    description = "Article not found",
+                    content = @Content(mediaType = "application/json")
+            ),
+            @ApiResponse(
+                    responseCode = "500", 
+                    description = "Internal server error",
+                    content = @Content(mediaType = "application/json")
+            )
     })
     public ResponseEntity<List<MonthlyMetricsDto>> getMonthlyMetrics(
-            @Parameter(description = "Article ID", required = true)
-            @PathVariable Long articleId) {
-        log.info("GET /api/v1/articles/{}/metrics/monthly", articleId);
-        return ResponseEntity.ok(articleService.getMonthlyMetrics(articleId));
+            @Parameter(description = "Unique article identifier", required = true, example = "12345")
+            @PathVariable Long articleId,
+            @Parameter(description = "Filter by year (optional). If provided, returns only data for that year", required = false, example = "2024")
+            @RequestParam(required = false) Integer year) {
+        log.info("GET /api/v1/articles/{}/metrics/monthly?year={}", articleId, year);
+        return ResponseEntity.ok(articleService.getMonthlyMetrics(articleId, year));
     }
 }

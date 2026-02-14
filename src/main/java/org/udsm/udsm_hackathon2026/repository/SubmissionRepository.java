@@ -37,4 +37,36 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
             "AND ps.locale = 'en_US'",
             nativeQuery = true)
     Optional<String> findArticleTitleBySubmissionId(@Param("submissionId") Long submissionId);
+
+
+    /**
+     * Count published articles (status = 3)
+     * @return count of published articles
+     */
+    @Query("SELECT COUNT(s) FROM Submission s WHERE s.status = 3")
+    Long countPublishedArticles();
+
+    /**
+     * Count declined articles (status = 4)
+     * @return count of declined articles
+     */
+    @Query("SELECT COUNT(s) FROM Submission s WHERE s.status = 4")
+    Long countDeclinedArticles();
+
+    /**
+     * Count articles under review (status = 1)
+     * @return count of articles under review
+     */
+    @Query("SELECT COUNT(s) FROM Submission s WHERE s.status = 1")
+    Long countUnderReviewArticles();
+
+    /**
+     * Count total submitted articles (all statuses)
+     * @return total count of all submissions
+     */
+    @Query("SELECT COUNT(s) FROM Submission s")
+    Long countTotalSubmittedArticles();
+
+    // Alternative: Using derived query methods (Spring Data JPA auto-implementation)
+    Long countByStatus(Integer status);
 }
