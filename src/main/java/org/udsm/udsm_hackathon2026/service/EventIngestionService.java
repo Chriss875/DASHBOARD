@@ -1,5 +1,4 @@
 package org.udsm.udsm_hackathon2026.service;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;

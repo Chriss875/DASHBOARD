@@ -1,5 +1,4 @@
 package org.udsm.udsm_hackathon2026.dto.realtime;
-
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 

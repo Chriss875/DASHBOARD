@@ -9,7 +9,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -27,13 +26,10 @@ public class EventIngestionController {
 
     private final EventIngestionService eventIngestionService;
 
-    @Value("${app.ingestion.api-key}")
-    private String configuredApiKey;
-
     @PostMapping("/ingest")
     @Operation(
         summary = "Ingest OJS read/download event",
-        description = "Accepts real-time events from OJS plugin, enriches with geo data, persists asynchronously, and broadcasts via WebSocket. Requires API key authentication via X-API-Key header."
+        description = "Accepts real-time events from OJS plugin, enriches with geo data, persists asynchronously, and broadcasts via WebSocket."
     )
     @ApiResponses(value = {
         @ApiResponse(
@@ -45,31 +41,16 @@ public class EventIngestionController {
             )
         ),
         @ApiResponse(
-            responseCode = "401",
-            description = "Unauthorized - Invalid or missing API key",
-            content = @Content
-        ),
-        @ApiResponse(
             responseCode = "400",
             description = "Bad Request - Invalid event payload",
             content = @Content
         )
     })
     public ResponseEntity<?> ingestEvent(
-            @Parameter(description = "API key for authentication", required = true)
-            @RequestHeader(value = "X-API-Key", required = false) String apiKey,
-            
             @Parameter(description = "Event payload from OJS plugin", required = true)
             @RequestBody EventIngestionDto eventDto) {
 
-        // 1. Validate API key
-        if (apiKey == null || !apiKey.equals(configuredApiKey)) {
-            log.warn("Unauthorized ingestion attempt with API key: {}", apiKey);
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(new ErrorResponse("Invalid or missing API key"));
-        }
-
-        // 2. Basic validation
+        // Basic validation
         if (eventDto.getEventType() == null || eventDto.getArticleId() == null) {
             log.warn("Invalid event payload: eventType={}, articleId={}", 
                      eventDto.getEventType(), eventDto.getArticleId());
@@ -77,7 +58,7 @@ public class EventIngestionController {
                     .body(new ErrorResponse("eventType and articleId are required"));
         }
 
-        // 3. Process event (enriches, persists async, broadcasts)
+        // Process event (enriches, persists async, broadcasts)
         try {
             EnrichedEventDto enrichedEvent = eventIngestionService.processEvent(eventDto);
             

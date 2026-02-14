@@ -1,40 +1,27 @@
-# Multi-stage build for Spring Boot application
-FROM gradle:8.5-jdk17 AS build
-
-# Set working directory
+FROM eclipse-temurin:17-jdk-jammy AS builder
 WORKDIR /app
 
-# Copy gradle files
-COPY build.gradle settings.gradle gradlew ./
-COPY gradle gradle/
+COPY gradlew .
 
-# Copy source code
-COPY src src/
+COPY gradle gradle
 
-# Build the application
-RUN ./gradlew build -x test --no-daemon
+COPY build.gradle .
 
-# Production stage
-FROM eclipse-temurin:17-jre-alpine
+COPY settings.gradle .
 
-# Install curl for healthcheck
-RUN apk add --no-cache curl
+COPY src src
 
-# Set working directory
+RUN ./gradlew clean build -x test --no-daemon
+
+FROM eclipse-temurin:17-jdk-jammy
+
 WORKDIR /app
 
-# Copy the built JAR from build stage
-COPY --from=build /app/build/libs/*.jar app.jar
+COPY --from=builder /app/build/libs/*.jar app.jar
 
 # Copy GeoIP database if it exists
-COPY --from=build /app/src/main/resources/geoip/ /app/geoip/ 2>/dev/null || true
+COPY src/main/resources/geoip /app/geoip
 
-# Expose application port
 EXPOSE 8080
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
-  CMD curl -f http://localhost:8080/actuator/health || exit 1
-
-# Run the application
-ENTRYPOINT ["java", "-jar", "/app/app.jar"]
+CMD ["java", "-jar", "app.jar"]
