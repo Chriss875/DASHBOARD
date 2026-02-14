@@ -1,4 +1,5 @@
 package org.udsm.udsm_hackathon2026.service;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -6,10 +7,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.udsm.udsm_hackathon2026.Controller.RealtimeWebSocketController;
 import org.udsm.udsm_hackathon2026.dto.realtime.EnrichedEventDto;
 import org.udsm.udsm_hackathon2026.dto.realtime.EventIngestionDto;
-import org.udsm.udsm_hackathon2026.model.LiveEvent;
-import org.udsm.udsm_hackathon2026.repository.LiveEventRepository;
+import org.udsm.udsm_hackathon2026.model.Metric;
+import org.udsm.udsm_hackathon2026.repository.MetricRepository;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -23,9 +25,10 @@ import java.util.UUID;
 public class EventIngestionService {
 
     private final GeoIPService geoIPService;
-    private final LiveEventRepository liveEventRepository;
+    private final MetricRepository metricRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final ObjectMapper objectMapper;
+    private final RealtimeWebSocketController realtimeWebSocketController;
 
     private static final DateTimeFormatter DAY_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final DateTimeFormatter MONTH_FORMATTER = DateTimeFormatter.ofPattern("yyyyMM");
@@ -44,7 +47,7 @@ public class EventIngestionService {
         // 2. Create enriched event DTO
         EnrichedEventDto enrichedEvent = buildEnrichedEvent(eventDto, geoLocation);
 
-        // 3. Async persistence (non-blocking)
+        // 3. Async persistence (non-blocking) to existing metrics table
         persistEventAsync(eventDto, geoLocation);
 
         // 4. Immediate WebSocket broadcast
@@ -107,23 +110,32 @@ public class EventIngestionService {
             // Determine assoc_type: 1048585 = READ, 515 = DOWNLOAD
             Long assocType = "READ".equalsIgnoreCase(eventDto.getEventType()) ? 1048585L : 515L;
 
-            LiveEvent liveEvent = LiveEvent.builder()
+            // Insert into existing metrics table
+            Metric metric = Metric.builder()
                     .loadId(UUID.randomUUID().toString())
                     .contextId(1L) // Default context, adjust as needed
                     .submissionId(eventDto.getArticleId())
-                    .assocType(assocType)
                     .assocId(eventDto.getArticleId())
+                    .assocType(assocType)
                     .day(timestamp.format(DAY_FORMATTER))
                     .month(timestamp.format(MONTH_FORMATTER))
                     .countryId(geoLocation.getCountryCode())
                     .region(geoLocation.getRegion())
                     .city(geoLocation.getCity())
                     .metricType("ojs::counter")
-                    .metric(1)
+                    .metric(1) // Increment by 1
                     .build();
 
-            liveEventRepository.save(liveEvent);
-            log.debug("Event persisted successfully: loadId={}", liveEvent.getLoadId());
+            metricRepository.save(metric);
+            log.debug("Event persisted to metrics table: loadId={}, articleId={}, country={}", 
+                     metric.getLoadId(), metric.getSubmissionId(), metric.getCountryId());
+
+            // After successful persistence, broadcast updated geo distribution to subscribed clients
+            realtimeWebSocketController.broadcastRealtimeEvent(
+                eventDto.getArticleId(), 
+                eventDto.getEventType(), 
+                geoLocation.getCountry()
+            );
 
         } catch (Exception e) {
             log.error("Failed to persist event asynchronously", e);

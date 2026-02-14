@@ -14,6 +14,9 @@ public class CorsConfig {
         config.addAllowedOriginPattern("*"); // allow all origins
         config.addAllowedHeader("*");
         config.addAllowedMethod("*");
+        config.setMaxAge(3600L); // Cache preflight response for 1 hour
+        config.addExposedHeader("*"); // Expose all headers to the client
+        
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return new CorsFilter(source);

@@ -1,24 +1,21 @@
 package org.udsm.udsm_hackathon2026.model;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Entity
 @Table(name = "metrics")
 @Getter
+@Setter
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class Metric {
 
     /**
-     * The metrics table has no single primary key in the schema.
-     * We use a synthetic row id via @GeneratedValue — but since this
-     * table is READ-ONLY from our side, Hibernate won't attempt inserts.
-     * We map an arbitrary unique combo as the ID workaround.
+     * The metrics table uses load_id as unique identifier for each metric entry.
+     * For real-time ingestion, we generate a UUID for each new event.
      */
     @Id
-    @Column(name = "assoc_id")
-    private Long assocId;
-
     @Column(name = "load_id")
     private String loadId;
 
@@ -28,33 +25,36 @@ public class Metric {
     @Column(name = "submission_id")
     private Long submissionId;
 
+    @Column(name = "assoc_id")
+    private Long assocId;
+
     @Column(name = "assoc_type")
-    private Long assocType;
+    private Long assocType; // 1048585 = reads, 515 = downloads
 
     @Column(name = "representation_id")
     private Long representationId;
 
     @Column(name = "day")
-    private String day;
+    private String day; // Format: YYYYMMDD
 
     @Column(name = "month")
-    private String month;
+    private String month; // Format: YYYYMM
 
     @Column(name = "file_type")
     private Short fileType;
 
     @Column(name = "country_id", length = 2)
-    private String countryId;
+    private String countryId; // ISO 2-letter code from GeoIP
 
     @Column(name = "region", length = 2)
-    private String region;
+    private String region; // Region code from GeoIP
 
     @Column(name = "city")
-    private String city;
+    private String city; // City name from GeoIP
 
     @Column(name = "metric_type")
-    private String metricType;
+    private String metricType; // e.g., "ojs::counter"
 
     @Column(name = "metric")
-    private Integer metric;
+    private Integer metric; // Count (typically 1 per event)
 }
