@@ -5,6 +5,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 import org.udsm.udsm_hackathon2026.dto.WebSocketPayload;
 
+
 @Slf4j
 @Component
 @RequiredArgsConstructor

@@ -35,3 +35,8 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### GeoIP Database ###
+# Exclude MaxMind GeoLite2 database files (large binary files)
+*.mmdb
+src/main/resources/geoip/*.mmdb
