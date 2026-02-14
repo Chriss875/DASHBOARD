@@ -31,9 +31,6 @@ public class AuthorListDto {
     @Schema(description = "Author's email address", example = "john.doe@udsm.ac.tz")
     private String email;
     
-    @Schema(description = "Author's phone number", example = "+255123456789")
-    private String phone;
-    
     @Schema(description = "Author's affiliation/institution", example = "University of Dar es Salaam")
     private String affiliation;
     

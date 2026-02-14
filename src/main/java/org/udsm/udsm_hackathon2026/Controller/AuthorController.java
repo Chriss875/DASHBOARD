@@ -39,7 +39,6 @@ public class AuthorController {
      * Returns a list of all authors in the system with their:
      * - Full name (first name + last name)
      * - Email address
-     * - Phone number
      * - Affiliation/Institution
      * - Country
      */
@@ -48,7 +47,7 @@ public class AuthorController {
         summary = "Get all authors",
         description = "Retrieves a complete list of all authors in the system with their contact details. " +
                      "Data is fetched from the OJS authors and author_settings tables. " +
-                     "Includes name, email, phone, affiliation, and country information."
+                     "Includes name, email, affiliation, and country information."
     )
     @ApiResponses(value = {
         @ApiResponse(
@@ -90,7 +89,7 @@ public class AuthorController {
     @Operation(
         summary = "Get author by ID",
         description = "Retrieves detailed information for a specific author by their unique ID. " +
-                     "Returns author's name, email, phone, affiliation, and country."
+                     "Returns author's name, email, affiliation, and country."
     )
     @ApiResponses(value = {
         @ApiResponse(

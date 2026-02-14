@@ -30,7 +30,7 @@ public class AuthorListService {
      * 
      * Fetches from:
      * - authors table: author_id, email
-     * - author_settings table: givenName, familyName, phone, affiliation, country
+     * - author_settings table: givenName, familyName, affiliation, country
      * 
      * @return List of authors with complete information
      */
@@ -52,11 +52,10 @@ public class AuthorListService {
                 .map(Author::getAuthorId)
                 .toList();
         
-        // Step 3: Fetch author settings (names, phone, affiliation, country)
+        // Step 3: Fetch author settings (names, affiliation, country)
         List<String> settingNames = List.of(
             "givenName",      // First name
             "familyName",     // Last name
-            "phone",          // Phone number
             "affiliation",    // Institution/Affiliation
             "country"         // Country
         );
@@ -89,7 +88,6 @@ public class AuthorListService {
             String givenName = settings.getOrDefault("givenName", "");
             String familyName = settings.getOrDefault("familyName", "");
             String fullName = buildFullName(givenName, familyName);
-            String phone = settings.getOrDefault("phone", "");
             String affiliation = settings.getOrDefault("affiliation", "");
             String country = settings.getOrDefault("country", "");
             
@@ -99,7 +97,6 @@ public class AuthorListService {
                     .familyName(familyName)
                     .fullName(fullName)
                     .email(author.getEmail())
-                    .phone(phone)
                     .affiliation(affiliation)
                     .country(country)
                     .build());
@@ -127,7 +124,7 @@ public class AuthorListService {
         }
         
         // Fetch author settings
-        List<String> settingNames = List.of("givenName", "familyName", "phone", "affiliation", "country");
+        List<String> settingNames = List.of("givenName", "familyName", "affiliation", "country");
         List<AuthorSetting> authorSettings = authorSettingRepository
                 .findByAuthorIdInAndSettingNameIn(List.of(authorId), settingNames);
         
@@ -148,7 +145,6 @@ public class AuthorListService {
                 .familyName(familyName)
                 .fullName(buildFullName(givenName, familyName))
                 .email(author.getEmail())
-                .phone(settings.getOrDefault("phone", ""))
                 .affiliation(settings.getOrDefault("affiliation", ""))
                 .country(settings.getOrDefault("country", ""))
                 .build();
