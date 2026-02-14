@@ -1,5 +1,4 @@
 package org.udsm.udsm_hackathon2026.Controller;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -17,10 +16,6 @@ import org.udsm.udsm_hackathon2026.service.AuthorListService;
 
 import java.util.List;
 
-/**
- * REST Controller for author management operations
- * Provides endpoints to retrieve author information including contact details
- */
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/authors")
