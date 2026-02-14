@@ -6,16 +6,18 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.udsm.udsm_hackathon2026.Controller.RealtimeWebSocketController;
+import org.udsm.udsm_hackathon2026.dto.GlobalGeoDistributionDTO;
 import org.udsm.udsm_hackathon2026.dto.realtime.EnrichedEventDto;
 import org.udsm.udsm_hackathon2026.dto.realtime.EventIngestionDto;
 import org.udsm.udsm_hackathon2026.model.Metric;
 import org.udsm.udsm_hackathon2026.repository.MetricRepository;
-
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -27,14 +29,21 @@ public class EventIngestionService {
     private final MetricRepository metricRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final ObjectMapper objectMapper;
-    private final RealtimeWebSocketController realtimeWebSocketController;
+    private final MetricsService metricsService;
+    private final CountryCoordinatesService coordinatesService;
 
     private static final DateTimeFormatter DAY_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final DateTimeFormatter MONTH_FORMATTER = DateTimeFormatter.ofPattern("yyyyMM");
 
     /**
-     * Process incoming event: enrich with geo data, persist async, broadcast via WebSocket
-     * This method returns immediately (202 Accepted pattern)
+     * Process incoming event with simplified WebSocket broadcasting
+     * 
+     * Flow:
+     * 1. Resolve GeoIP
+     * 2. Increment Redis counters
+     * 3. Broadcast individual event to /topic/{type}/live
+     * 4. Broadcast aggregated geo distribution to /topic/{type}/geo
+     * 5. Save to database (async)
      */
     public EnrichedEventDto processEvent(EventIngestionDto eventDto) {
         log.debug("Processing event: type={}, articleId={}, ip={}", 
@@ -46,13 +55,37 @@ public class EventIngestionService {
         // 2. Create enriched event DTO
         EnrichedEventDto enrichedEvent = buildEnrichedEvent(eventDto, geoLocation);
 
-        // 3. Async persistence (non-blocking) to existing metrics table
+        // 3. Increment Redis counters (real-time, in-memory)
+        incrementRedisCounters(eventDto, geoLocation);
+
+        // 4. Broadcast to WebSocket (2 topics: live event + geo distribution)
+        broadcastEvent(enrichedEvent, geoLocation);
+
+        // 5. Async database persistence
         persistEventAsync(eventDto, geoLocation);
 
-        // 4. Immediate WebSocket broadcast
-        broadcastEvent(enrichedEvent);
-
         return enrichedEvent;
+    }
+    
+    /**
+     * Increment Redis counters for real-time tracking
+     */
+    private void incrementRedisCounters(EventIngestionDto eventDto, GeoIPService.GeoLocation geoLocation) {
+        try {
+            String countryCode = geoLocation.getCountryCode();
+            
+            if ("READ".equalsIgnoreCase(eventDto.getEventType())) {
+                metricsService.recordReadership(eventDto.getArticleId(), countryCode);
+                log.debug("✅ Redis: Incremented read counter for article {} in {}", 
+                         eventDto.getArticleId(), countryCode);
+            } else if ("DOWNLOAD".equalsIgnoreCase(eventDto.getEventType())) {
+                metricsService.recordDownload(eventDto.getArticleId(), countryCode);
+                log.debug("✅ Redis: Incremented download counter for article {} in {}", 
+                         eventDto.getArticleId(), countryCode);
+            }
+        } catch (Exception e) {
+            log.error("Failed to increment Redis counters", e);
+        }
     }
 
     private EnrichedEventDto buildEnrichedEvent(EventIngestionDto eventDto, GeoIPService.GeoLocation geoLocation) {
@@ -72,6 +105,16 @@ public class EventIngestionService {
             }
         }
 
+        // Extract galley information from nested object (for downloads)
+        String galleyLabel = null;
+        String galleyMimeType = null;
+        String galleyFileName = null;
+        if (eventDto.getGalley() != null) {
+            galleyLabel = eventDto.getGalley().getGalleyLabel();
+            galleyMimeType = eventDto.getGalley().getMimeType();
+            galleyFileName = eventDto.getGalley().getFileName();
+        }
+
         return EnrichedEventDto.builder()
                 .eventType(eventDto.getEventType())
                 .timestamp(timestamp)
@@ -84,9 +127,9 @@ public class EventIngestionService {
                 .doi(eventDto.getDoi())
                 .sectionTitle(eventDto.getSectionTitle())
                 .authorsJson(authorsJson)
-                .galleyLabel(eventDto.getGalley() != null ? eventDto.getGalley().getGalleyLabel() : null)
-                .galleyMimeType(eventDto.getGalley() != null ? eventDto.getGalley().getMimeType() : null)
-                .galleyFileName(eventDto.getGalley() != null ? eventDto.getGalley().getFileName() : null)
+                .galleyLabel(galleyLabel)
+                .galleyMimeType(galleyMimeType)
+                .galleyFileName(galleyFileName)
                 .country(geoLocation.getCountry())
                 .countryCode(geoLocation.getCountryCode())
                 .city(geoLocation.getCity())
@@ -112,7 +155,7 @@ public class EventIngestionService {
             // Insert into existing metrics table
             Metric metric = Metric.builder()
                     .loadId(UUID.randomUUID().toString())
-                    .contextId(1L) // Default context, adjust as needed
+                    .contextId(1L)
                     .submissionId(eventDto.getArticleId())
                     .assocId(eventDto.getArticleId())
                     .assocType(assocType)
@@ -122,36 +165,93 @@ public class EventIngestionService {
                     .region(geoLocation.getRegion())
                     .city(geoLocation.getCity())
                     .metricType("ojs::counter")
-                    .metric(1) // Increment by 1
+                    .metric(1)
                     .build();
 
             metricRepository.save(metric);
-            log.debug("Event persisted to metrics table: loadId={}, articleId={}, country={}", 
-                     metric.getLoadId(), metric.getSubmissionId(), metric.getCountryId());
-
-            // After successful persistence, broadcast updated geo distribution to subscribed clients
-            realtimeWebSocketController.broadcastRealtimeEvent(
-                eventDto.getArticleId(), 
-                eventDto.getEventType(), 
-                geoLocation.getCountry()
-            );
+            log.debug("✅ Database: Event persisted - article={}, country={}, type={}", 
+                     metric.getSubmissionId(), metric.getCountryId(), eventDto.getEventType());
 
         } catch (Exception e) {
-            log.error("Failed to persist event asynchronously", e);
+            log.error("Failed to persist event to database", e);
         }
     }
 
-    private void broadcastEvent(EnrichedEventDto enrichedEvent) {
+    /**
+     * Broadcast to WebSocket - Simplified to 4 focused topics
+     * 
+     * For READS:
+     * - /topic/reads/live → Individual event
+     * - /topic/reads/geo → Aggregated global distribution
+     * 
+     * For DOWNLOADS:
+     * - /topic/downloads/live → Individual event  
+     * - /topic/downloads/geo → Aggregated global distribution
+     */
+    private void broadcastEvent(EnrichedEventDto enrichedEvent, GeoIPService.GeoLocation geoLocation) {
         try {
-            String topic = "READ".equalsIgnoreCase(enrichedEvent.getEventType()) 
-                    ? "/topic/reads" 
-                    : "/topic/downloads";
+            boolean isRead = "READ".equalsIgnoreCase(enrichedEvent.getEventType());
             
-            messagingTemplate.convertAndSend(topic, enrichedEvent);
-            log.debug("Event broadcast to {} successfully", topic);
+            // 1. Broadcast individual live event
+            String liveTopic = isRead ? "/topic/reads/live" : "/topic/downloads/live";
+            messagingTemplate.convertAndSend(liveTopic, enrichedEvent);
+            log.debug("📡 WebSocket: Broadcast to {} - article={}, country={}", 
+                     liveTopic, enrichedEvent.getArticleId(), geoLocation.getCountry());
+
+            // 2. Broadcast aggregated geographical distribution (ALL articles)
+            String geoTopic = isRead ? "/topic/reads/geo" : "/topic/downloads/geo";
+            GlobalGeoDistributionDTO geoDistribution = buildGlobalGeoDistribution(isRead);
+            messagingTemplate.convertAndSend(geoTopic, geoDistribution);
+            log.debug("📡 WebSocket: Broadcast to {} - total={} across {} countries", 
+                     geoTopic, geoDistribution.getTotal(), geoDistribution.getCountryCount());
 
         } catch (Exception e) {
             log.error("Failed to broadcast event via WebSocket", e);
         }
+    }
+    
+    /**
+     * Build global geographical distribution from Redis
+     */
+    private GlobalGeoDistributionDTO buildGlobalGeoDistribution(boolean isRead) {
+        // Get aggregated data from Redis
+        Map<String, Long> geoData = isRead 
+            ? metricsService.getReadershipGeoAll() 
+            : metricsService.getDownloadsGeoAll();
+        
+        // Calculate total
+        long total = geoData.values().stream().mapToLong(Long::longValue).sum();
+        
+        // Build country metrics with coordinates
+        List<GlobalGeoDistributionDTO.CountryMetric> countries = new ArrayList<>();
+        
+        for (Map.Entry<String, Long> entry : geoData.entrySet()) {
+            String countryCode = entry.getKey();
+            Long count = entry.getValue();
+            
+            CountryCoordinatesService.CountryCoords coords = coordinatesService.getCoordinates(countryCode);
+            
+            double percentage = total > 0 ? (count * 100.0 / total) : 0.0;
+            percentage = Math.round(percentage * 100.0) / 100.0;
+            
+            countries.add(GlobalGeoDistributionDTO.CountryMetric.builder()
+                .countryCode(countryCode)
+                .countryName(coords.name)
+                .count(count)
+                .latitude(coords.latitude)
+                .longitude(coords.longitude)
+                .percentage(percentage)
+                .build());
+        }
+        
+        // Sort by count descending
+        countries.sort((a, b) -> Long.compare(b.getCount(), a.getCount()));
+        
+        return GlobalGeoDistributionDTO.builder()
+            .type(isRead ? "reads" : "downloads")
+            .total(total)
+            .countryCount(countries.size())
+            .countries(countries)
+            .build();
     }
 }
