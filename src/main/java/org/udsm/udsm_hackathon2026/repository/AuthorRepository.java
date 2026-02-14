@@ -10,6 +10,13 @@ import java.util.List;
 public interface AuthorRepository extends JpaRepository<Author, Long> {
     List<Author> findByPublicationIdOrderBySeqAsc(Long publicationId);
     
+    /**
+     * Get all distinct authors for the authors list endpoint
+     * Returns all unique authors ordered by author_id
+     */
+    @Query("SELECT DISTINCT a FROM Author a ORDER BY a.authorId ASC")
+    List<Author> findAllDistinctAuthors();
+    
     // ============= Dashboard Metrics Queries =============
     
     /**

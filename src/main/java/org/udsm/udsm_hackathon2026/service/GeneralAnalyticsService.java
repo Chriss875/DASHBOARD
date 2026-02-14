@@ -28,65 +28,38 @@ public class GeneralAnalyticsService {
     private final ArticleInfoService articleService;
     private final PublicationSettingRepository publicationSettingRepository;
 
-    /**
-     * OJS assoc_type constants from the metrics table.
-     */
-    private static final long ASSOC_TYPE_SUBMISSION = 256L;  // abstract page view = readership
-    private static final long ASSOC_TYPE_GALLEY = 515L;      // file view = download
-
-    // ══════════════════════════════════════════════════════════════
-    //  1. Total Downloads — SUM(metric) WHERE assoc_type = 515
-    // ══════════════════════════════════════════════════════════════
+    private static final long ASSOC_TYPE_SUBMISSION = 256L;
+    private static final long ASSOC_TYPE_GALLEY = 515L;
 
     public long getTotalDownloads() {
         return metricRepository.sumTotalDownloads();
     }
 
-    // ══════════════════════════════════════════════════════════════
-    //  2. Total Citations — COUNT of rows in OJS citations table
-    // ══════════════════════════════════════════════════════════════
-
     public long getTotalCitations() {
         return citationRepository.countTotalCitations();
     }
 
-    // ══════════════════════════════════════════════════════════════
-    //  3. Total Readers — SUM(metric) WHERE assoc_type = 256
-    // ══════════════════════════════════════════════════════════════
 
     public long getTotalReaders() {
         return metricRepository.sumTotalReaders();
     }
 
-    // ══════════════════════════════════════════════════════════════
-    //  4. Total Articles — COUNT of publications
-    // ══════════════════════════════════════════════════════════════
 
     public long getTotalArticles() {
         return publicationRepository.count();
     }
-
-    // ══════════════════════════════════════════════════════════════
-    //  5. Top Readership Countries
-    // ══════════════════════════════════════════════════════════════
 
     public List<CountryCountDto> getTopReadershipCountries(int limit) {
         List<Object[]> rows = metricRepository.findTopReadershipCountries(limit);
         return toCountryCountList(rows);
     }
 
-    // ══════════════════════════════════════════════════════════════
-    //  6. Top Download Countries
-    // ══════════════════════════════════════════════════════════════
 
     public List<CountryCountDto> getTopDownloadCountries(int limit) {
         List<Object[]> rows = metricRepository.findTopDownloadCountries(limit);
         return toCountryCountList(rows);
     }
 
-    // ══════════════════════════════════════════════════════════════
-    //  7. Top Read Articles (with title, authors, and abstract)
-    // ══════════════════════════════════════════════════════════════
 
     public List<TopArticleDto> getTopReadArticles(int limit) {
         List<Object[]> rows = metricRepository.findTopReadArticles(limit);
@@ -99,11 +72,9 @@ public class GeneralAnalyticsService {
         for (Object[] row : rows) {
             Long submissionId = toLong(row[0]);
             Long reads = toLong(row[1]);
-            
-            // Fetch complete article info (title, authors, abstract)
+
             ArticleInfoDto articleInfo = articleService.getArticleInfo(submissionId);
-            
-            // Build authors string (comma-separated)
+
             String authorsString = articleInfo.getAuthors() != null && !articleInfo.getAuthors().isEmpty()
                 ? String.join(", ", articleInfo.getAuthors())
                 : "Unknown";
@@ -120,8 +91,6 @@ public class GeneralAnalyticsService {
         return result;
     }
 
-    // ────────────────────────── HELPERS ──────────────────────────
-
     private List<CountryCountDto> toCountryCountList(List<Object[]> rows) {
         return rows.stream()
                 .map(row -> CountryCountDto.builder()
@@ -131,10 +100,6 @@ public class GeneralAnalyticsService {
                 .toList();
     }
 
-    /**
-     * Fetches titles via the join: submissions.submission_id → publications → publication_settings.
-     * Returns a map of submission_id → title.
-     */
     private Map<Long, String> fetchTitlesBySubmissionIds(List<Long> submissionIds) {
         List<Object[]> titleRows = publicationSettingRepository.findTitlesBySubmissionIds(submissionIds);
         return titleRows.stream()
@@ -145,10 +110,6 @@ public class GeneralAnalyticsService {
                 ));
     }
 
-    /**
-     * Native queries return BigDecimal/BigInteger for SUM results on MariaDB.
-     * This safely converts to Long.
-     */
     private long toLong(Object value) {
         if (value == null) return 0L;
         if (value instanceof Long l) return l;
@@ -166,7 +127,6 @@ public class GeneralAnalyticsService {
                     Long submissionId = ((Number) row[0]).longValue();
                     Long totalDownloads = ((Number) row[1]).longValue();
 
-                    // Fetch article metadata (title + authors)
                     ArticleInfoDto article = articleService.getArticleInfo(submissionId);
 
                     return TopDownloadsDto.builder()
@@ -178,15 +138,6 @@ public class GeneralAnalyticsService {
                 })
                 .toList();
     }
-
-    // ══════════════════════════════════════════════════════════════
-    //  TOTAL MONTHLY METRICS FOR ALL ARTICLES
-    // ══════════════════════════════════════════════════════════════
-
-    /**
-     * Get total monthly views AND downloads statistics for ALL articles combined
-     * @param year Optional year filter. If null, returns all years
-     */
     public List<MonthlyMetricsDto> getTotalMonthlyMetrics(Integer year) {
         log.info("Fetching total monthly views and downloads for all articles for year: {}", year);
 
@@ -212,10 +163,7 @@ public class GeneralAnalyticsService {
         log.info("Found {} months of total data across all articles (year: {})", monthlyMetrics.size(), year);
         return monthlyMetrics;
     }
-    
-    /**
-     * Get total monthly views AND downloads - LEGACY VERSION (for backward compatibility)
-     */
+
     public List<MonthlyMetricsDto> getTotalMonthlyMetrics() {
         return getTotalMonthlyMetrics(null);
     }

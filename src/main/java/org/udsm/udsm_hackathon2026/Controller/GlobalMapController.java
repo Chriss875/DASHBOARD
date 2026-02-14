@@ -1,5 +1,4 @@
 package org.udsm.udsm_hackathon2026.Controller;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -12,7 +11,6 @@ import org.springframework.web.bind.annotation.*;
 import org.udsm.udsm_hackathon2026.dto.GlobalGeoDistributionDTO;
 import org.udsm.udsm_hackathon2026.service.CountryCoordinatesService;
 import org.udsm.udsm_hackathon2026.service.MetricsService;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -86,6 +84,7 @@ public class GlobalMapController {
             
             GlobalGeoDistributionDTO response = GlobalGeoDistributionDTO.builder()
                 .type("reads")
+                .timestamp(java.time.Instant.now())
                 .total(totalReads)
                 .countryCount(countries.size())
                 .countries(countries)
@@ -154,6 +153,7 @@ public class GlobalMapController {
             
             GlobalGeoDistributionDTO response = GlobalGeoDistributionDTO.builder()
                 .type("downloads")
+                .timestamp(java.time.Instant.now())
                 .total(totalDownloads)
                 .countryCount(countries.size())
                 .countries(countries)

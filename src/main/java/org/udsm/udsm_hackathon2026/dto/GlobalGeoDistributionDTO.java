@@ -1,11 +1,10 @@
 package org.udsm.udsm_hackathon2026.dto;
-
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
+import java.time.Instant;
 import java.util.List;
 
 /**
@@ -20,6 +19,9 @@ public class GlobalGeoDistributionDTO {
     
     @Schema(description = "Type of metric: reads or downloads", example = "reads")
     private String type;
+    
+    @Schema(description = "Timestamp when this data was generated", example = "2026-02-15T00:54:15Z")
+    private Instant timestamp;
     
     @Schema(description = "Total count across all countries", example = "15234")
     private Long total;

@@ -76,11 +76,11 @@ public class EventIngestionService {
             
             if ("READ".equalsIgnoreCase(eventDto.getEventType())) {
                 metricsService.recordReadership(eventDto.getArticleId(), countryCode);
-                log.debug("✅ Redis: Incremented read counter for article {} in {}", 
+                log.debug("Redis: Incremented read counter for article {} in {}", 
                          eventDto.getArticleId(), countryCode);
             } else if ("DOWNLOAD".equalsIgnoreCase(eventDto.getEventType())) {
                 metricsService.recordDownload(eventDto.getArticleId(), countryCode);
-                log.debug("✅ Redis: Incremented download counter for article {} in {}", 
+                log.debug("Redis: Incremented download counter for article {} in {}", 
                          eventDto.getArticleId(), countryCode);
             }
         } catch (Exception e) {
@@ -90,10 +90,22 @@ public class EventIngestionService {
 
     private EnrichedEventDto buildEnrichedEvent(EventIngestionDto eventDto, GeoIPService.GeoLocation geoLocation) {
         Instant timestamp;
-        try {
-            timestamp = Instant.parse(eventDto.getTimestamp());
-        } catch (Exception e) {
+        
+        // Parse timestamp from event, with robust error handling
+        if (eventDto.getTimestamp() == null || eventDto.getTimestamp().isEmpty()) {
             timestamp = Instant.now();
+            log.warn("No timestamp provided in event for article {}. Using server time: {}", 
+                     eventDto.getArticleId(), timestamp);
+        } else {
+            try {
+                timestamp = Instant.parse(eventDto.getTimestamp());
+                log.debug("Parsed timestamp from event: {} (article {})", 
+                         timestamp, eventDto.getArticleId());
+            } catch (Exception e) {
+                timestamp = Instant.now();
+                log.error("Invalid timestamp format '{}' for article {}. Using server time: {}. Error: {}", 
+                         eventDto.getTimestamp(), eventDto.getArticleId(), timestamp, e.getMessage());
+            }
         }
 
         String authorsJson = null;
@@ -169,7 +181,7 @@ public class EventIngestionService {
                     .build();
 
             metricRepository.save(metric);
-            log.debug("✅ Database: Event persisted - article={}, country={}, type={}", 
+            log.debug("Database: Event persisted - article={}, country={}, type={}", 
                      metric.getSubmissionId(), metric.getCountryId(), eventDto.getEventType());
 
         } catch (Exception e) {
@@ -195,14 +207,14 @@ public class EventIngestionService {
             // 1. Broadcast individual live event
             String liveTopic = isRead ? "/topic/reads/live" : "/topic/downloads/live";
             messagingTemplate.convertAndSend(liveTopic, enrichedEvent);
-            log.debug("📡 WebSocket: Broadcast to {} - article={}, country={}", 
+            log.debug("WebSocket: Broadcast to {} - article={}, country={}", 
                      liveTopic, enrichedEvent.getArticleId(), geoLocation.getCountry());
 
             // 2. Broadcast aggregated geographical distribution (ALL articles)
             String geoTopic = isRead ? "/topic/reads/geo" : "/topic/downloads/geo";
             GlobalGeoDistributionDTO geoDistribution = buildGlobalGeoDistribution(isRead);
             messagingTemplate.convertAndSend(geoTopic, geoDistribution);
-            log.debug("📡 WebSocket: Broadcast to {} - total={} across {} countries", 
+            log.debug("WebSocket: Broadcast to {} - total={} across {} countries", 
                      geoTopic, geoDistribution.getTotal(), geoDistribution.getCountryCount());
 
         } catch (Exception e) {
@@ -249,6 +261,7 @@ public class EventIngestionService {
         
         return GlobalGeoDistributionDTO.builder()
             .type(isRead ? "reads" : "downloads")
+            .timestamp(Instant.now())
             .total(total)
             .countryCount(countries.size())
             .countries(countries)
