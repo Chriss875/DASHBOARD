@@ -96,7 +96,7 @@ stompClient.connect({}, () => {
 For event ingestion endpoint, include the API key:
 ```typescript
 const headers = {
-  'X-API-Key': 'ur04O0u7OXSkNwjPJ0mNLFOnrMMCPX1CwkpjhyHoXeQ=',
+  'X-API-Key': 'your-api-key-here',  // Replace with actual API key
   'Content-Type': 'application/json'
 };
 ```
@@ -157,7 +157,7 @@ docker-compose restart app
 ### Event Ingestion
 ```bash
 POST http://localhost:8080/api/v1/events/ingest
-Headers: X-API-Key: ur04O0u7OXSkNwjPJ0mNLFOnrMMCPX1CwkpjhyHoXeQ=
+Headers: X-API-Key: your-api-key-here  # Replace with actual API key
 Body: {
   "galley": {
     "pubObjectId": "12345",
@@ -279,9 +279,9 @@ export default Analytics;
 - Password: `rootpassword`
 
 **API Key:**
-- `ur04O0u7OXSkNwjPJ0mNLFOnrMMCPX1CwkpjhyHoXeQ=`
+- Set your API key in `compose.yaml` or use environment variable
 
-⚠️ **Note:** Change these in production!
+⚠️ **Note:** Change default passwords and API keys before using in production!
 
 ## 📚 More Documentation
 

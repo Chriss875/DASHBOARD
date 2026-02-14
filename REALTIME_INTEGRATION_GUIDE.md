@@ -57,7 +57,7 @@ metrics table:
 **Headers**:
 ```
 Content-Type: application/json
-X-API-Key: ur04O0u7OXSkNwjPJ0mNLFOnrMMCPX1CwkpjhyHoXeQ=
+X-API-Key: your-api-key-here
 ```
 
 **Request Body**:
@@ -345,7 +345,7 @@ dashboard.watchArticle(1542);
 ```bash
 curl -X POST http://localhost:8080/api/v1/events/ingest \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: ur04O0u7OXSkNwjPJ0mNLFOnrMMCPX1CwkpjhyHoXeQ=" \
+  -H "X-API-Key: your-api-key-here" \
   -d '{
     "eventType": "READ",
     "timestamp": "2026-02-14T18:00:00Z",

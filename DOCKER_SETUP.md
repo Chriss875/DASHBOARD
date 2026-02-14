@@ -101,7 +101,7 @@ environment:
   SPRING_WEB_CORS_ALLOWED_ORIGINS: http://localhost:4200,http://localhost:3000
   
   # API Key
-  APP_INGESTION_API_KEY: ur04O0u7OXSkNwjPJ0mNLFOnrMMCPX1CwkpjhyHoXeQ=
+  APP_INGESTION_API_KEY: your-api-key-here  # Replace with actual key
 ```
 
 ### Frontend Integration
@@ -314,7 +314,7 @@ Once running, the following endpoints are available:
 
 ### Event Ingestion
 - `POST /api/v1/events/ingest` - Ingest analytics events
-  - Headers: `X-API-Key: ur04O0u7OXSkNwjPJ0mNLFOnrMMCPX1CwkpjhyHoXeQ=`
+  - Headers: `X-API-Key: your-api-key-here` (set in compose.yaml)
 
 ### Analytics
 - `GET /api/v1/analytics/reads?articleId={id}&from={date}&to={date}`
@@ -353,4 +353,3 @@ docker system prune -a --volumes
 **Note**: Remember to restart the services after making configuration changes:
 ```bash
 docker-compose restart app
-```
