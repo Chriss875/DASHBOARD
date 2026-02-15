@@ -66,6 +66,12 @@ dependencies {
     // MaxMind GeoIP2 for IP geolocation
     implementation 'com.maxmind.geoip2:geoip2:4.2.0'
 
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    implementation 'org.apache.commons:commons-pool2'
+
+    // Apache Commons Pool2 (for Redis connection pooling)
+    implementation 'org.apache.commons:commons-pool2'
+
     // Test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

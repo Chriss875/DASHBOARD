@@ -8,23 +8,32 @@ import org.udsm.udsm_hackathon2026.model.PublicationCitationHistory;
 import org.udsm.udsm_hackathon2026.service.CrossrefCitationService;
 import java.util.List;
 
+
 @RestController
 @RequestMapping("/api/citations")
 @RequiredArgsConstructor
 @Slf4j
 public class CitationController {
-        private final CrossrefCitationService citationService;
+    private final CrossrefCitationService citationService;
 
-        /**
-         * Get citation count for a specific publication
-         * GET /api/citations/publication/{id}
-         */
-        @GetMapping("/publication/{publicationId}")
-        public ResponseEntity<CitationResponse> getCitationCount(@PathVariable Long publicationId) {
-            log.info("Getting citation count for publication {}", publicationId);
-            CitationResponse response = citationService.getOrUpdateCitationCount(publicationId);
-            return ResponseEntity.ok(response);
-        }
+    /**
+     * Get citation count for a specific publication
+     * GET /api/citations/publication/{id}
+     */
+    @GetMapping("/publication/{publicationId}")
+    public ResponseEntity<CitationResponse> getCitationCount(@PathVariable Long publicationId) {
+        log.info("Getting citation count for publication {}", publicationId);
+        CitationResponse response = citationService.getOrUpdateCitationCount(publicationId);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/recent-increases")
+    public ResponseEntity<List<PublicationCitationHistory>> getRecentCitationIncreases() {
+        log.info("Getting recent citation increases");
+        List<PublicationCitationHistory> increases = citationService.getRecentCitationIncreases();
+        return ResponseEntity.ok(increases);
+    }
+}
 
 
         /*
@@ -50,26 +59,6 @@ public class CitationController {
         }
 
 
-         * Update all publications with DOIs
-         * POST /api/citations/update-all
-
-        @PostMapping("/update-all")
-        public ResponseEntity<List<CitationResponse>> updateAllPublications() {
-            log.info("Updating citation counts for all publications");
-            List<CitationResponse> responses = citationService.updateAllPublications();
-            return ResponseEntity.ok(responses);
-        }
-
-         * Update publications that haven't been checked in X hours
-         * POST /api/citations/update-stale?hours=24
-
-        @PostMapping("/update-stale")
-        public ResponseEntity<List<CitationResponse>> updateStalePublications(
-                @RequestParam(defaultValue = "24") int hours) {
-            log.info("Updating stale publications (older than {} hours)", hours);
-            List<CitationResponse> responses = citationService.updateStalePublications(hours);
-            return ResponseEntity.ok(responses);
-        }
 
 
          * Get citation history for a publication
@@ -83,14 +72,6 @@ public class CitationController {
             return ResponseEntity.ok(history);
         }
 
+}*/
 
-         * Get recent citation increases across all publications
-         * GET /api/citations/recent-increases
 
-        @GetMapping("/recent-increases")
-        public ResponseEntity<List<PublicationCitationHistory>> getRecentCitationIncreases() {
-            log.info("Getting recent citation increases");
-            List<PublicationCitationHistory> increases = citationService.getRecentCitationIncreases();
-            return ResponseEntity.ok(increases);
-        }*/
-}

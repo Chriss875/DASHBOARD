@@ -1,25 +1,35 @@
 package org.udsm.udsm_hackathon2026.service;
-import org.udsm.udsm_hackathon2026.dto.ArticleListDto;
-import org.udsm.udsm_hackathon2026.dto.ArticleMetricsResponseDto;
-import org.udsm.udsm_hackathon2026.dto.GeographicalMetricsDto;
-import org.udsm.udsm_hackathon2026.dto.MonthlyMetricsDto;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.udsm.udsm_hackathon2026.dto.*;
 import org.udsm.udsm_hackathon2026.repository.ArticleRepository;
 import org.udsm.udsm_hackathon2026.repository.CitationRepository;
 import org.udsm.udsm_hackathon2026.repository.MetricRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class ArticleAnalyticsService {
-
     private final ArticleRepository articleRepository;
     private final MetricRepository metricRepository;
     private final CitationRepository citationRepository;
+    private final CrossrefCitationService citationService;
+    private final StringRedisTemplate stringRedisTemplate; // Simple String-based Redis
+    private final CountryCoordinatesService coordinatesService;
+    private final ObjectMapper objectMapper; // For JSON serialization
+
+    private static final String ARTICLE_METADATA_KEY = "article:metadata:";
+    private static final long CACHE_TTL_HOURS = 24;
 
     /**
      * Get all articles for listing (ID and name only - no categories)
@@ -67,6 +77,9 @@ public class ArticleAnalyticsService {
             authors = articleRepository.findAuthorNamesByPublicationId(publicationId);
         }
 
+        // Cache article metadata in Redis for future use
+        cacheArticleMetadata(articleId, name, authors);
+
         // Get metrics
         Long totalDownloads = metricRepository.getTotalDownloadsByArticle(articleId);
         Long totalReaders = metricRepository.getTotalReadersByArticle(articleId);
@@ -74,7 +87,8 @@ public class ArticleAnalyticsService {
         // Get citations
         Long totalCitations = 0L;
         if (publicationId != null) {
-            totalCitations = citationRepository.countCitationsByPublicationId(publicationId);
+            CitationResponse citationResponse = citationService.getOrUpdateCitationCount(publicationId);
+            totalCitations = citationResponse.getCitationCount() != null ? citationResponse.getCitationCount() : 0L;
         }
 
         ArticleMetricsResponseDto response = new ArticleMetricsResponseDto(
@@ -93,7 +107,7 @@ public class ArticleAnalyticsService {
     }
 
     /**
-     * Get geographical distribution of reads for an article
+     * Get geographical distribution of reads for an article (LEGACY - basic version)
      */
     public List<GeographicalMetricsDto> getGeographicalReads(Long articleId) {
         log.info("Fetching geographical reads for article ID: {}", articleId);
@@ -114,7 +128,7 @@ public class ArticleAnalyticsService {
     }
 
     /**
-     * Get geographical distribution of downloads for an article
+     * Get geographical distribution of downloads for an article (LEGACY - basic version)
      */
     public List<GeographicalMetricsDto> getGeographicalDownloads(Long articleId) {
         log.info("Fetching geographical downloads for article ID: {}", articleId);
@@ -135,6 +149,102 @@ public class ArticleAnalyticsService {
     }
 
     /**
+     * Get ENHANCED geographical distribution of reads with article metadata
+     */
+    public List<EnhnacedGeographicalMetricsDto> getEnhancedGeographicalReads(Long articleId) {
+        log.info("Fetching enhanced geographical reads for article ID: {}", articleId);
+
+        // Get article metadata (from cache or DB)
+        ArticleMetadata metadata = getArticleMetadata(articleId);
+
+        // Get geographical data
+        List<Object[]> rows = metricRepository.getGeographicalReadsByArticle(articleId);
+        List<EnhnacedGeographicalMetricsDto> metrics = new ArrayList<>();
+
+        // Calculate total for percentage
+        long total = rows.stream().mapToLong(row -> ((Number) row[3]).longValue()).sum();
+
+        for (Object[] row : rows) {
+            String countryCode = (String) row[0];
+            String region = (String) row[1];
+            String city = (String) row[2];
+            Long count = ((Number) row[3]).longValue();
+
+            // Get coordinates for this country
+            CountryCoordinatesService.CountryCoords coords = coordinatesService.getCoordinates(countryCode);
+
+            // Calculate percentage
+            double percentage = total > 0 ? (count * 100.0 / total) : 0.0;
+            percentage = Math.round(percentage * 100.0) / 100.0;
+
+            metrics.add(EnhnacedGeographicalMetricsDto.builder()
+                    .countryCode(countryCode)
+                    .countryName(coords.name)
+                    .region(region)
+                    .city(city)
+                    .count(count)
+                    .articleId(articleId)
+                    .articleTitle(metadata.getTitle())
+                    .authors(metadata.getAuthors())
+                    .latitude(coords.latitude)
+                    .longitude(coords.longitude)
+                    .percentage(percentage)
+                    .build());
+        }
+
+        log.info("Found {} enhanced geographical read locations for article {}", metrics.size(), articleId);
+        return metrics;
+    }
+
+    /**
+     * Get ENHANCED geographical distribution of downloads with article metadata
+     */
+    public List<EnhnacedGeographicalMetricsDto> getEnhancedGeographicalDownloads(Long articleId) {
+        log.info("Fetching enhanced geographical downloads for article ID: {}", articleId);
+
+        // Get article metadata (from cache or DB)
+        ArticleMetadata metadata = getArticleMetadata(articleId);
+
+        // Get geographical data
+        List<Object[]> rows = metricRepository.getGeographicalDownloadsByArticle(articleId);
+        List<EnhnacedGeographicalMetricsDto> metrics = new ArrayList<>();
+
+        // Calculate total for percentage
+        long total = rows.stream().mapToLong(row -> ((Number) row[3]).longValue()).sum();
+
+        for (Object[] row : rows) {
+            String countryCode = (String) row[0];
+            String region = (String) row[1];
+            String city = (String) row[2];
+            Long count = ((Number) row[3]).longValue();
+
+            // Get coordinates for this country
+            CountryCoordinatesService.CountryCoords coords = coordinatesService.getCoordinates(countryCode);
+
+            // Calculate percentage
+            double percentage = total > 0 ? (count * 100.0 / total) : 0.0;
+            percentage = Math.round(percentage * 100.0) / 100.0;
+
+            metrics.add(EnhnacedGeographicalMetricsDto.builder()
+                    .countryCode(countryCode)
+                    .countryName(coords.name)
+                    .region(region)
+                    .city(city)
+                    .count(count)
+                    .articleId(articleId)
+                    .articleTitle(metadata.getTitle())
+                    .authors(metadata.getAuthors())
+                    .latitude(coords.latitude)
+                    .longitude(coords.longitude)
+                    .percentage(percentage)
+                    .build());
+        }
+
+        log.info("Found {} enhanced geographical download locations for article {}", metrics.size(), articleId);
+        return metrics;
+    }
+
+    /**
      * Get monthly views AND downloads - ENHANCED VERSION
      * @param articleId The article ID
      * @param year Optional year filter. If null, returns all years
@@ -148,7 +258,7 @@ public class ArticleAnalyticsService {
         } else {
             rows = metricRepository.getMonthlyMetricsByArticle(articleId);
         }
-        
+
         List<MonthlyMetricsDto> monthlyMetrics = new ArrayList<>();
 
         for (Object[] row : rows) {
@@ -164,11 +274,95 @@ public class ArticleAnalyticsService {
         log.info("Found {} months of data for article {} (year: {})", monthlyMetrics.size(), articleId, year);
         return monthlyMetrics;
     }
-    
+
     /**
      * Get monthly views AND downloads - LEGACY VERSION (for backward compatibility)
      */
     public List<MonthlyMetricsDto> getMonthlyMetrics(Long articleId) {
         return getMonthlyMetrics(articleId, null);
+    }
+
+    /**
+     * Cache article metadata in Redis as JSON string
+     */
+    private void cacheArticleMetadata(Long articleId, String title, List<String> authors) {
+        try {
+            String key = ARTICLE_METADATA_KEY + articleId;
+
+            // Create metadata map
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("title", title);
+            metadata.put("authors", authors);
+
+            // Serialize to JSON string
+            String jsonValue = objectMapper.writeValueAsString(metadata);
+
+            // Store in Redis
+            stringRedisTemplate.opsForValue().set(key, jsonValue, CACHE_TTL_HOURS, TimeUnit.HOURS);
+            log.debug("Cached metadata for article {} in Redis", articleId);
+
+        } catch (Exception e) {
+            log.warn("Failed to cache article metadata in Redis for article {}", articleId, e);
+        }
+    }
+
+    /**
+     * Get article metadata from Redis cache (JSON string) or database
+     */
+    private ArticleMetadata getArticleMetadata(Long articleId) {
+        try {
+            // Try to get from cache first
+            String key = ARTICLE_METADATA_KEY + articleId;
+            String jsonValue = stringRedisTemplate.opsForValue().get(key);
+
+            if (jsonValue != null) {
+                // Deserialize from JSON
+                Map<String, Object> cached = objectMapper.readValue(
+                        jsonValue,
+                        new TypeReference<Map<String, Object>>() {}
+                );
+
+                log.debug("Retrieved article metadata from Redis cache for article {}", articleId);
+                return new ArticleMetadata(
+                        (String) cached.get("title"),
+                        (List<String>) cached.get("authors")
+                );
+            }
+        } catch (Exception e) {
+            log.warn("Failed to retrieve from Redis cache, falling back to database", e);
+        }
+
+        // Cache miss - fetch from database
+        log.debug("Cache miss for article {}, fetching from database", articleId);
+        List<Object[]> articleRows = articleRepository.findArticleDetailsById(articleId);
+
+        if (articleRows.isEmpty()) {
+            log.error("Article with ID {} not found", articleId);
+            return new ArticleMetadata("Unknown Article", new ArrayList<>());
+        }
+
+        Object[] row = articleRows.get(0);
+        String title = (String) row[1];
+        Long publicationId = row[4] != null ? ((Number) row[4]).longValue() : null;
+
+        List<String> authors = new ArrayList<>();
+        if (publicationId != null) {
+            authors = articleRepository.findAuthorNamesByPublicationId(publicationId);
+        }
+
+        // Cache it for next time
+        cacheArticleMetadata(articleId, title, authors);
+
+        return new ArticleMetadata(title, authors);
+    }
+
+    /**
+     * Inner class for article metadata
+     */
+    @lombok.Data
+    @lombok.AllArgsConstructor
+    private static class ArticleMetadata {
+        private String title;
+        private List<String> authors;
     }
 }

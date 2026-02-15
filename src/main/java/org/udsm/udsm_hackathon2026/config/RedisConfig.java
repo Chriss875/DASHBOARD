@@ -6,11 +6,17 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 
 @Configuration
 public class RedisConfig {
+
+    /**
+     * Existing bean - for String values
+     */
     @Bean
     public StringRedisTemplate stringRedisTemplate(RedisConnectionFactory connectionFactory) {
         StringRedisTemplate template = new StringRedisTemplate();
         template.setConnectionFactory(connectionFactory);
-        template.setEnableTransactionSupport(false); // no TX overhead — we use atomic HINCRBY
+        template.setEnableTransactionSupport(false);
         return template;
     }
+
+
 }
