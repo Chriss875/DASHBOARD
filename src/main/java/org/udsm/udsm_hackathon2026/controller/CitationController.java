@@ -22,9 +22,10 @@ public class CitationController {
         @GetMapping("/publication/{publicationId}")
         public ResponseEntity<CitationResponse> getCitationCount(@PathVariable Long publicationId) {
             log.info("Getting citation count for publication {}", publicationId);
-            CitationResponse response = citationService.updateCitationCount(publicationId);
+            CitationResponse response = citationService.getOrUpdateCitationCount(publicationId);
             return ResponseEntity.ok(response);
         }
+
 
         /*
          * Update citation count for a specific publication

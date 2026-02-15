@@ -81,8 +81,61 @@ public class CrossrefCitationService {
     /**
      * Update citation count for a specific publication
      */
+    /**
+     * Smart method: Get citation count, auto-update if stale
+     * - If checked within last 24 hours: return cached data
+     * - If older or never checked: fetch from Crossref
+     */
     @Transactional
-    public CitationResponse updateCitationCount(Long publicationId) {
+    public CitationResponse getOrUpdateCitationCount(Long publicationId) {
+        Optional<Publication> publicationOpt = publicationRepository.findById(publicationId);
+
+        if (publicationOpt.isEmpty()) {
+            return CitationResponse.builder()
+                    .publicationId(publicationId)
+                    .status("ERROR")
+                    .message("Publication not found")
+                    .build();
+        }
+
+        Publication publication = publicationOpt.get();
+
+        if (publication.getDoi() == null || publication.getDoi().isEmpty()) {
+            return CitationResponse.builder()
+                    .publicationId(publicationId)
+                    .status("ERROR")
+                    .message("No DOI found for this publication")
+                    .build();
+        }
+
+        // Check if data is fresh (less than 24 hours old)
+        boolean isDataFresh = publication.getLastCitationCheck() != null &&
+                publication.getLastCitationCheck()
+                        .isAfter(LocalDateTime.now().minusHours(24));
+
+        if (isDataFresh) {
+            // Return cached data (no API call needed)
+            log.info("Returning cached citation count for publication {}", publicationId);
+            return CitationResponse.builder()
+                    .publicationId(publication.getPublicationId())
+                    .doi(publication.getDoi())
+                    .citationCount(publication.getCitationCount())
+                    .lastChecked(publication.getLastCitationCheck())
+                    .status("SUCCESS")
+                    .message("Citation count (cached)")
+                    .build();
+        } else {
+            // Data is stale, update from Crossref
+            log.info("Data is stale, updating from Crossref for publication {}", publicationId);
+            return updatePublicationCitations(publication);
+        }
+    }
+
+    /**
+     * Force update (keep for admin use only)
+     */
+    @Transactional
+    public CitationResponse forceUpdateCitationCount(Long publicationId) {
         Optional<Publication> publicationOpt = publicationRepository.findById(publicationId);
 
         if (publicationOpt.isEmpty()) {
