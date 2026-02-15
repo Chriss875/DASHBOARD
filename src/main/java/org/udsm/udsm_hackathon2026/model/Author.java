@@ -16,7 +16,7 @@ public class Author {
     @Column(name = "publication_id")
     private Long publicationId;
 
-    @Column(name = "email")
+    @Column(name = "email",nullable = false)
     private String email;
 
     @Column(name = "seq")

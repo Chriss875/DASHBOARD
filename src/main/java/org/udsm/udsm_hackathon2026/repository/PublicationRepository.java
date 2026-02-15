@@ -4,8 +4,11 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.udsm.udsm_hackathon2026.model.Publication;
+
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 
 @Repository
@@ -63,5 +66,21 @@ public interface PublicationRepository extends JpaRepository<Publication, Long> 
      */
     @Query("SELECT COUNT(p) FROM Publication p")
     Long getTotalCount();
+
+    // Find publication by DOI
+    Optional<Publication> findByDoi(String doi);
+
+    // Find all publications with DOIs
+    @Query("SELECT p FROM Publication p WHERE p.doi IS NOT NULL AND p.doi != ''")
+    List<Publication> findAllWithDoi();
+
+    // Find publications that need citation update (older than X hours)
+    @Query("SELECT p FROM Publication p WHERE p.doi IS NOT NULL AND p.doi != '' " +
+            "AND (p.lastCitationCheck IS NULL OR p.lastCitationCheck < :cutoffTime)")
+    List<Publication> findPublicationsNeedingUpdate(LocalDateTime cutoffTime);
+
+    // Find publications with recent citation increases
+    @Query("SELECT p FROM Publication p WHERE p.citationCount > 0 ORDER BY p.lastCitationCheck DESC")
+    List<Publication> findRecentlyUpdatedPublications();
 
 }

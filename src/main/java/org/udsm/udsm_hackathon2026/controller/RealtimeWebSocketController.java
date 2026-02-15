@@ -1,4 +1,4 @@
-package org.udsm.udsm_hackathon2026.Controller;
+package org.udsm.udsm_hackathon2026.controller;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.MessageMapping;

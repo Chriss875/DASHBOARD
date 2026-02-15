@@ -28,9 +28,11 @@ dependencies {
     // Web + WebSocket
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
 
     // Redis (Lettuce client included)
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
     
     // Caching with Caffeine
     implementation 'org.springframework.boot:spring-boot-starter-cache'

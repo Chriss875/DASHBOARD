@@ -1,4 +1,4 @@
-package org.udsm.udsm_hackathon2026.Controller;
+package org.udsm.udsm_hackathon2026.controller;
 import org.udsm.udsm_hackathon2026.dto.ArticleListDto;
 import org.udsm.udsm_hackathon2026.dto.ArticleMetricsResponseDto;
 import org.udsm.udsm_hackathon2026.dto.GeographicalMetricsDto;
